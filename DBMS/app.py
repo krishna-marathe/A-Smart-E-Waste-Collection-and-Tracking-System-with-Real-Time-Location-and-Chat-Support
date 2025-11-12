@@ -28,7 +28,7 @@ from werkzeug.utils import secure_filename # --- Imports for File Uploads ---
 app = Flask(__name__)
 
 # --- Your Keys ---
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:Jignesh#087@localhost:5432/ewaste_db'
+
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 app.config['SECRET_KEY'] = 'fa3c7494dd04b422fb6d8646900d9e17e2936cfe0d562783165fc3e2c7435fbd'
