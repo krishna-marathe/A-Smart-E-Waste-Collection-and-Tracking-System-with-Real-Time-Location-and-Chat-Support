@@ -1,0 +1,16 @@
+{% extends "layout.html" %}
+{% block content %}
+<h2>Edit Request</h2>
+<form method="POST">
+  <div class="form-group">
+    <label>Item name</label>
+    <input type="text" name="item_name" value="{{ req.item_name }}" required>
+  </div>
+  <div class="form-group">
+    <label>Description</label>
+    <textarea name="description" rows="5">{{ req.description }}</textarea>
+  </div>
+  <button type="submit">Save Changes</button>
+  <a href="{{ url_for('view_request', request_id=req.id) }}">Cancel</a>
+</form>
+{% endblock %}

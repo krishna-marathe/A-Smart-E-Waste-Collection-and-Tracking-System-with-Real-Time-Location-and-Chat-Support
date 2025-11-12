@@ -1,0 +1,35 @@
+{% extends "layout.html" %}
+{% block content %}
+<h2>Incoming Claim Requests</h2>
+<hr>
+
+{% if claims %}
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Item</th>
+        <th>Collector</th>
+        <th>Requested On</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for claim in claims %}
+      <tr>
+        <td>{{ claim.request.item_name }}</td>
+        <td>{{ claim.collector.full_name }}</td>
+        <td>{{ claim.created_on.strftime('%Y-%m-%d %H:%M') }}</td>
+        <td>
+          <a href="{{ url_for('view_request', request_id=claim.request_id) }}" class="btn btn-secondary">💬 Chat</a>
+          <form action="{{ url_for('approve_claim', claim_id=claim.id) }}" method="POST" style="display:inline;">
+            <button type="submit" class="btn btn-primary">Approve</button>
+          </form>
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+{% else %}
+  <p>No claim requests at the moment.</p>
+{% endif %}
+{% endblock %}

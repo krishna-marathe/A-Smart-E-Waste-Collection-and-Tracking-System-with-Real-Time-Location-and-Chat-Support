@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <title>E-Waste Management</title>
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhmppM/tc0jP8yTqGqxS6JTcAXUOYBEiEPLI="
+    crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+         crossorigin=""></script>
+    <!-- <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #f4f4f4; }
+        .navbar { background-color: #333; overflow: hidden; }
+        .navbar a { float: left; display: block; color: white; text-align: center; padding: 14px 20px; text-decoration: none; }
+        .navbar-right { float: right; }
+        .content { padding: 20px; }
+        .alert { padding: 15px; margin-bottom: 20px; border: 1px solid transparent; border-radius: 4px; }
+        .alert-success { color: #155724; background-color: #d4edda; border-color: #c3e6cb; }
+        .alert-danger { color: #721c24; background-color: #f8d7da; border-color: #f5c6cb; }
+        .alert-info { color: #0c5460; background-color: #d1ecf1; border-color: #bee5eb; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; }
+        .form-group input { width: 300px; padding: 8px; }
+
+        /* --- CHAT STYLES --- */
+        .chat-box {
+            border: 1px solid #ccc;
+            height: 300px;
+            overflow-y: scroll;
+            padding: 10px;
+            background: #e5ddd5; /* WhatsApp-like background */
+            display: flex; /* This is key! */
+            flex-direction: column; /* This is key! */
+        }
+        .message {
+            max-width: 70%;
+            margin-bottom: 10px;
+            padding: 8px 12px;
+            border-radius: 7px;
+            word-wrap: break-word;
+        }
+        .message strong { color: #007bff; }
+        .message p { margin: 5px 0 0; }
+        .message small { color: #888; display: block; text-align: right; font-size: 0.75em; }
+        
+        .message.them {
+            align-self: flex-start; /* Aligns to the left */
+            background-color: #ffffff;
+            border: 1px solid #ddd;
+        }
+        .message.me {
+            align-self: flex-end; /* Aligns to the right */
+            background-color: #dcf8c6; /* WhatsApp green */
+        }
+        .message.me strong { color: #075e54; } /* Darker green for name */
+        
+        /* --- NOTIFICATION BELL STYLES --- */
+        .notification-bell {
+            position: relative;
+            cursor: pointer;
+        }
+        .notification-bell .bell-icon {
+            font-size: 1.2em;
+            padding-top: 2px; /* Aligns bell better with text */
+        }
+        .notification-bell .dot {
+            position: absolute;
+            top: 10px;
+            right: 12px;
+            width: 8px;
+            height: 8px;
+            background-color: #ff3b30; /* Red dot */
+            border-radius: 50%;
+            border: 1px solid #333;
+        }
+        .notification-dropdown {
+            display: none; /* Hidden by default */
+            position: absolute;
+            right: 0;
+            top: 50px; /* Below the navbar */
+            width: 300px;
+            max-height: 400px;
+            overflow-y: auto;
+            background-color: white;
+            border: 1px solid #ccc;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            z-index: 1000;
+        }
+        .notification-dropdown a {
+            float: none;
+            display: block;
+            color: black;
+            padding: 12px 16px;
+            text-decoration: none;
+            text-align: left;
+            border-bottom: 1px solid #f4f4f4;
+        }
+        .notification-dropdown a:hover {
+            background-color: #f1f1f1;
+        }
+        .notification-dropdown .n-header {
+            font-weight: bold;
+            padding: 12px 16px;
+            background-color: #f9f9f9;
+        }
+        .notification-dropdown .n-message {
+            font-size: 0.9em;
+            white-space: normal;
+        }
+        .notification-dropdown .n-timestamp {
+            font-size: 0.75em;
+            color: #888;
+        }
+    </style> -->
+</head>
+<body>
+
+    <div class="navbar">
+        <a href="{{ url_for('index') }}">Home</a>
+
+        <div class="navbar-right">
+            {% if current_user.is_authenticated %}
+
+                <a id="notification-bell" class="notification-bell">
+                    <span class="bell-icon">🔔</span>
+                    {% if unread_notifications|length > 0 %}
+                        <span class="dot"></span>
+                    {% endif %}
+                </a>
+                <a href="{{ url_for('select_profile') }}">Switch/Add Profile</a>
+                
+                {% if session.active_profile_id %}
+                    <a href="{{ url_for('logout') }}">Logout ({{ get_active_profile().profile_name }})</a>
+                {% else %}
+                    <a href="{{ url_for('logout') }}">Logout</a>
+                {% endif %}
+            {% else %}
+                <a href="{{ url_for('login') }}">Login</a>
+                <a href="{{ url_for('register') }}">Register</a>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if current_user.is_authenticated %}
+    <div id="notification-dropdown" class="notification-dropdown">
+        <div class="n-header">Notifications</div>
+        {% if unread_notifications %}
+            {% for notification in unread_notifications %}
+                <a href="{{ notification.link_url }}">
+                    <div class="n-message">{{ notification.message }}</div>
+                    <div class="n-timestamp">{{ notification.timestamp.strftime('%Y-%m-%d %H:%M') }}</div>
+                </a>
+            {% endfor %}
+        {% else %}
+            <a href="#" style="pointer-events: none;">
+                <div class="n-message">No unread notifications.</div>
+            </a>
+        {% endif %}
+    </div>
+    {% endif %}
+    <div class="content">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var bell = document.getElementById('notification-bell');
+            var dropdown = document.getElementById('notification-dropdown');
+            var dot = document.querySelector('.notification-bell .dot');
+
+            if (bell) {
+                bell.onclick = function(event) {
+                    event.stopPropagation();
+                    // Toggle the dropdown
+                    var isHidden = dropdown.style.display === 'none' || dropdown.style.display === '';
+                    dropdown.style.display = isHidden ? 'block' : 'none';
+
+                    // If we just opened it and the dot exists, mark as read
+                    if (isHidden && dot) {
+                        // Mark as read on the server
+                        fetch("{{ url_for('mark_notifications_as_read') }}", {
+                            method: 'POST'
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                // Remove the dot visually
+                                dot.style.display = 'none';
+                            }
+                        });
+                    }
+                }
+            }
+
+            // Close dropdown if clicking outside
+            document.onclick = function(event) {
+                if (dropdown && dropdown.style.display === 'block') {
+                    if (!dropdown.contains(event.target) && !bell.contains(event.target)) {
+                        dropdown.style.display = 'none';
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>

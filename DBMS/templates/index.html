@@ -1,0 +1,216 @@
+{% extends "layout.html" %}
+
+{% block content %}
+    
+    {% if active_profile.role == 'disposer' %}
+        <h2>Disposer Dashboard</h2>
+        <p>Welcome, {{ active_profile.full_name }}! Here are your e-waste requests.</p>
+        
+        <a href="{{ url_for('submit_request') }}">
+            <button>+ Submit New E-Waste Request</button>
+        </a>
+        
+        <hr>
+        <h3>Your Past Requests</h3>
+        
+        {% set active_requests = my_requests | rejectattr('status', 'equalto', 'Completed') | list %}
+
+        {% if my_requests %}
+            <table border="1" style="width:100%; border-collapse: collapse;">
+                <thead>
+                    <tr>
+                        <th style="padding: 8px;">Item Name</th>
+                        <th style="padding: 8px;">Status</th>
+                        <th style="padding: 8px;">Submitted On</th>
+                        <th style="padding: 8px;">Collected By</th>
+                        <th style="padding: 8px;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for req in my_requests %}
+                    <tr>
+                        <td style="padding: 8px;">{{ req.item_name }}</td>
+                        <td style="padding: 8px;">{{ req.status }}</td>
+                        <td style="padding: 8px;">{{ req.submitted_on.strftime('%Y-%m-%d') }}</td>
+                        <td style="padding: 8px;">
+                            {% if req.status == 'Accepted' and req.collector_profile %}
+                                {{ req.collector_profile.profile_name }}
+                            {% else %}
+                                Not yet claimed
+                            {% endif %}
+                        </td>
+                        <td style="padding: 8px;">
+                            <a href="{{ url_for('view_request', request_id=req.id) }}">View Details & Chat</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p>You have not submitted any requests yet.</p>
+        {% endif %}
+
+        <hr style="margin-top: 30px;">
+        <h3>Completed Requests</h3>
+
+        {% if completed_requests %}
+        <table border="1" style="width:100%; border-collapse: collapse;">
+            <thead>
+            <tr>
+                <th style="padding: 8px;">Item Name</th>
+                <th style="padding: 8px;">Collected By</th>
+                <th style="padding: 8px;">Completed On</th>
+                <th style="padding: 8px;">Actions</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for req in completed_requests %}
+            <tr>
+                <td style="padding: 8px;">{{ req.item_name }}</td>
+                <td style="padding: 8px;">{{ req.collector_profile.profile_name if req.collector_profile else '—' }}</td>
+                <td style="padding: 8px;">{{ req.completed_on.strftime('%Y-%m-%d %H:%M') if req.completed_on else '-' }}</td>
+                <td style="padding: 8px;">
+                <a href="{{ url_for('view_request', request_id=req.id) }}">View Details</a>
+                </td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p>No completed requests yet.</p>
+        {% endif %}
+
+    {% elif active_profile.role == 'collector' %}
+        <h2>Collector Dashboard</h2>
+        <p>Welcome, {{ active_profile.full_name }}!</p>
+
+        <hr>
+        
+        <form method="GET" action="{{ url_for('index') }}">
+            <h3>Filter Requests</h3>
+            <div class="form-group">
+                <label>Filter by Item Name:</label>
+                <input type="text" name="search" placeholder="e.g., 'mobile', 'laptop'" value="{{ search_query or '' }}">
+            </div>
+            
+            <div class="form-group">
+                <label>Filter by Radius (from your profile address):</label>
+                <select name="radius" style="padding: 8px;">
+                    <option value="">-- Select Distance --</option>
+                    <option value="5" {% if radius_query == '1' %}selected{% endif %}>Within 1 km</option>
+                    <option value="5" {% if radius_query == '5' %}selected{% endif %}>Within 5 km</option>
+                    <option value="10" {% if radius_query == '10' %}selected{% endif %}>Within 10 km</option>
+                    <option value="25" {% if radius_query == '25' %}selected{% endif %}>Within 25 km</option>
+                    <option value="50" {% if radius_query == '50' %}selected{% endif %}>Within 50 km</option>
+                </select>
+            </div>
+
+            <button type="submit">Filter</button>
+            <a href="{{ url_for('index') }}">Clear</a>
+        </form>
+
+        <hr>
+
+        <h3>Pending Requests (Available to Claim)</h3>
+        
+        {% if pending_requests %}
+            <table border="1" style="width:100%; border-collapse: collapse;">
+                <thead>
+                    <tr>
+                        <th style="padding: 8px;">Item Name</th>
+                        <th style="padding: 8px;">Disposer</th>
+                        <th style="padding: 8px;">Address</th>
+                        <th style="padding: 8px;">Submitted On</th>
+                        <th style="padding: 8px;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for req in pending_requests %}
+                    <tr>
+                        <td style="padding: 8px;">{{ req.item_name }}</td>
+                        <td style="padding: 8px;">{{ req.disposer_profile.full_name }}</td>
+                        <td style="padding: 8px;">{{ req.disposer_profile.address }}</td>
+                        <td style="padding: 8px;">{{ req.submitted_on.strftime('%Y-%m-%d') }}</td>
+                        <td style="padding: 8px;">
+                            <a href="{{ url_for('view_request', request_id=req.id) }}">View Details & Claim</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p>No pending requests match your filter.</p>
+        {% endif %}
+
+        <hr style="margin-top: 30px;">
+
+        <h3>Your Claimed Requests</h3>
+        
+        {% if my_claimed_requests %}
+            <table border="1" style="width:100%; border-collapse: collapse;">
+                <thead>
+                    <tr>
+                        <th style="padding: 8px;">Item Name</th>
+                        <th style="padding: 8px;">Disposer</th>
+                        <th style="padding: 8px;">Status</th>
+                        <th style="padding: 8px;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for req in my_claimed_requests %}
+                    <tr>
+                        <td style="padding: 8px;">{{ req.item_name }}</td>
+                        <td style="padding: 8px;">{{ req.disposer_profile.full_name }}</td>
+                        <td style="padding: 8px;">{{ req.status }}</td>
+                        <td style="padding: 8px;">
+                            <a href="{{ url_for('view_request', request_id=req.id) }}">View Details & Chat</a>
+
+                            {% if req.status == 'Accepted' %}
+                                <form action="{{ url_for('mark_completed', request_id=req.id) }}" method="POST" style="display:inline;">
+                                    <button type="submit" class="btn btn-success btn-sm" 
+                                            onclick="return confirm('Confirm pickup is complete?');">
+                                        Mark as Completed ✅
+                                    </button>
+                                </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p>No claimed requests match your filter.</p>
+        {% endif %}
+        
+        <hr style="margin-top: 30px;">
+        <h3>Completed Pickups</h3>
+
+        {% if completed_pickups %}
+            <table border="1" style="width:100%; border-collapse: collapse;">
+                <thead>
+                    <tr>
+                        <th style="padding: 8px;">Item Name</th>
+                        <th style="padding: 8px;">Disposer</th>
+                        <th style="padding: 8px;">Completed On</th>
+                        <th style="padding: 8px;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for req in completed_pickups %}
+                <tr>
+                    <td style="padding: 8px;">{{ req.item_name }}</td>
+                    <td style="padding: 8px;">{{ req.disposer_profile.full_name }}</td>
+                    <td style="padding: 8px;">{{ req.completed_on.strftime('%Y-%m-%d %H:%M') if req.completed_on else '-' }}</td>
+                    <td style="padding: 8px;">
+                    <a href="{{ url_for('view_request', request_id=req.id) }}">View Details</a>
+                    </td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+        <p>No completed pickups yet.</p>
+        {% endif %}
+    {% endif %}
+
+{% endblock %}

@@ -1,0 +1,30 @@
+{% extends "layout.html" %}
+
+{% block content %}
+    <h2>Submit a New E-Waste Request</h2>
+    
+    <form method="POST" enctype="multipart/form-data">
+        
+        <div class="form-group">
+            <label>Item Name</label>
+            <input type="text" name="item_name" class="form-control" required>
+            <small>e.g., "Old Dell Monitor", "Broken iPhone 8"</small>
+        </div>
+        
+        <div class="form-group">
+            <label>Description</label>
+            <textarea name="description" class="form-control" rows="4"></textarea>
+            <small>Please describe the item, its condition, etc.</small>
+        </div>
+        
+        <div class="form-group">
+            <label>Upload Images (Optional)</label>
+            <input type="file" name="images" class="form-control" multiple>
+        </div>
+        
+        <div class="form-group">
+            <button type="submit">Submit Request</button>
+        </div>
+
+    </form>
+{% endblock %}

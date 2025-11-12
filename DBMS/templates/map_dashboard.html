@@ -1,0 +1,112 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<!-- <style>
+    /* Map styling */
+    #map {
+        width: 100%;
+        height: 600px;
+        border-radius: 10px;
+        border: 2px solid #ccc;
+    }
+
+    @media (max-width: 768px) {
+        #map {
+            height: 400px;
+        }
+    }
+
+    #recenter-btn {
+        background-color: #007bff;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 5px;
+        cursor: pointer;
+        margin-bottom: 10px;
+    }
+
+    #recenter-btn:hover {
+        background-color: #0056b3;
+    }
+
+    h2 {
+        margin-top: 0.5rem;
+    }
+</style> -->
+
+<h2>Collector Map Dashboard</h2>
+<p>View all pending e-waste requests on an interactive map. Click a marker to see details.</p>
+
+<button id="recenter-btn">Recenter Map</button>
+<div id="map"></div>
+
+<script>
+let map;
+let markers = [];
+
+function initMap() {
+    // Initialize the map centered on India
+    map = new google.maps.Map(document.getElementById("map"), {
+        center: { lat: 20.5937, lng: 78.9629 },
+        zoom: 5,
+        mapTypeControl: true,
+        streetViewControl: false,
+        fullscreenControl: true,
+    });
+
+    // Fetch pending requests data from Flask API
+    fetch("{{ url_for('get_pending_requests_data') }}")
+        .then(response => response.json())
+        .then(data => {
+            const bounds = new google.maps.LatLngBounds();
+
+            data.features.forEach(feature => {
+                const lat = feature.geometry.coordinates[1];
+                const lng = feature.geometry.coordinates[0];
+                const item = feature.properties.item_name;
+                const address = feature.properties.address;
+                const id = feature.properties.id;
+
+                const marker = new google.maps.Marker({
+                    position: { lat, lng },
+                    map: map,
+                    title: item,
+                });
+
+                const infoWindow = new google.maps.InfoWindow({
+                    content: `
+                        <strong>${item}</strong><br>
+                        ${address}<br>
+                        <a href="/request/${id}" target="_blank">View Details</a>
+                    `
+                });
+
+                marker.addListener("click", () => {
+                    infoWindow.open(map, marker);
+                });
+
+                markers.push(marker);
+                bounds.extend(marker.getPosition());
+            });
+
+            if (!bounds.isEmpty()) {
+                map.fitBounds(bounds);
+            }
+
+            document.getElementById("recenter-btn").onclick = () => {
+                if (!bounds.isEmpty()) map.fitBounds(bounds);
+            };
+        })
+        .catch(err => {
+            console.error("Error loading map data:", err);
+            alert("Failed to load map data. Please check your Flask route or key settings.");
+        });
+}
+</script>
+
+<!-- ✅ Load Google Maps JavaScript API -->
+<script async
+    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDa6JfHpSixfrXkABi4CUSXIvZjAhP0TEc&callback=initMap">
+</script>
+{% endblock %}
